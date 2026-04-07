@@ -1,187 +1,113 @@
 <?php
-// 1. Koneksi dan Controller (Panggil di paling atas)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+include_once 'controllers/AuthController.php';
 require_once 'config/database.php';
 
-// Agar mesinnya jalan, kita panggil controller sesuai halaman
-$page = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
+// 1. Cek apakah user sudah login
+$is_login = isset($_SESSION['status']) && $_SESSION['status'] == 'login';
 
+// 2. Logika Proses Login
+if (isset($_POST['btn_login'])) {
+    if (login($conn, $_POST['username'], $_POST['password'])) {
+        header("Location: index.php?page=dashboard");
+    } else {
+        header("Location: index.php?pesan=gagal");
+    }
+    exit;
+}
+
+// 3. Jika BELUM login, paksa tampilkan halaman login
+if (!$is_login) {
+    include 'views/auth/login.php';
+    exit;
+}
+
+// 4. Tentukan Halaman
+$page = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
+$role = $_SESSION['role']; // Ambil role dari session
+
+// --- SWITCH 1: KHUSUS PEMANGGILAN CONTROLLER (MESIN) + SECURITY ---
 switch ($page) {
     case 'outlet':
     case 'outlet_tambah':
     case 'outlet_edit':
-        include 'controllers/OutletController.php';
+        // Hanya Admin yang bisa kelola Outlet
+        if ($role !== 'admin') {
+            header("Location: index.php?page=dashboard&pesan=terlarang");
+            exit;
+        }
+        include_once 'controllers/OutletController.php';
         break;
+
     case 'member':
     case 'member_tambah':
-        include 'controllers/MemberController.php';
+    case 'member_edit':
+        // Owner tidak boleh tambah/edit member
+        if (($page == 'member_tambah' || $page == 'member_edit') && $role === 'owner') {
+            header("Location: index.php?page=member&pesan=terlarang");
+            exit;
+        }
+        include_once 'controllers/MemberController.php';
         break;
+
     case 'user':
-        include 'controllers/UserController.php';
+    case 'user_tambah':
+        // Hanya Admin yang bisa kelola User
+        if ($role !== 'admin') {
+            header("Location: index.php?page=dashboard&pesan=terlarang");
+            exit;
+        }
+        include_once 'controllers/UserController.php';
         break;
-        
 }
 
-// 2. Bagian Head & Header
+// 5. Bagian Head & Aset
 include 'views/layout/header.php';
 ?>
 
-<div class="container mt-4">
-    <?php
-    // 3. Logika Routing
-    switch ($page) {
-        case 'outlet':
-            include 'views/outlet/index.php';
-            break;
-        case 'outlet_tambah':
-            include 'views/outlet/tambah.php';
-            break;
-        case 'outlet_edit':
-            include 'views/outlet/edit.php';
-            break;
-        case 'member':
-            include 'views/member/index.php';
-            break;
-        case 'user':
-            include 'views/user/index.php';
-            break;
-        case 'transaksi':
-            include 'views/transaksi/index.php';
-            break;
+<div class="d-flex">
+    <?php include 'views/layout/sidebar.php'; ?>
 
-        // Tampilan Dashboard (Halaman Utama)
-        default:
-            ?>
-            <div class="row align-items-center mb-5">
-                <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold">LaundryKu Premium</h1>
-                    <p class="lead">Platform manajemen laundry terbaik untuk bisnis Anda. Kelola outlet, pengguna, dan transaksi dengan satu sistem terintegrasi.</p>
-                    <p><strong>Kebersihan adalah prioritas kami.</strong> Siap membantu bisnis Anda naik ke level berikutnya.</p>
-                </div>
-                <div class="col-lg-6">
-                    <div id="myCarousel" class="carousel slide shadow shadow-lg" data-bs-ride="carousel" style="border-radius: 15px; overflow: hidden;">
-                        <div class="carousel-inner">
-                            <div class="carousel-item active">
-                                <img src="https://as1.ftcdn.net/jpg/04/63/41/18/1000_F_463411850_Grl9sQmrcwA53riQdVuQ5npHaBCkGqSn.jpg" class="d-block w-100" alt="Laundry 1">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="https://www.housedigest.com/img/gallery/10-laundry-practices-from-around-the-world-to-try-and-which-are-best-to-skip/try-north-america-self-service-laundromats-1733399025.jpg" class="d-block w-100" alt="Laundry 2">
-                            </div>
-                        </div>
+    <div class="main-content flex-grow-1">
+        <nav class="top-navbar d-flex justify-content-between align-items-center px-4">
+            <h5 class="mb-0 fw-bold text-uppercase" style="letter-spacing: 1px;">
+                <i class="bi bi-grid-1x2-fill me-3 text-primary"></i> 
+                LaundryKu <span class="text-primary">System</span>
+            </h5>
+            <div class="dropdown">
+                <a href="#" class="text-decoration-none text-dark dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                    <div class="text-end me-2 d-none d-sm-block">
+                        <small class="text-muted d-block" style="font-size: 10px;">Login Sebagai</small>
+                        <span class="fw-bold text-primary" style="font-size: 13px;"><?php echo strtoupper($role); ?></span>
                     </div>
-                </div>
+                    <img src="https://www.w3schools.com/w3images/bandmember.jpg" class="rounded-circle border" width="35" height="35">
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 me-3">
+                    <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i> Keluar</a></li>
+                </ul>
             </div>
+        </nav>
 
-            <hr class="my-5">
-
-            <div class="container text-center mt-5">
-                <h3 class="mb-4 fw-bold">MANAJEMEN OPERASIONAL</h3>
-                <div class="row g-4">
-                    <div class="col-sm-4">
-                        <p><strong>OUTLET</strong></p>
-                        <a href="index.php?page=outlet">
-                            <img src="https://www.w3schools.com/w3images/bandmember.jpg" class="rounded-circle person shadow" alt="Outlet" width="200">
-                        </a>
-                        <p class="mt-3">Atur lokasi cabang laundry Anda.</p>
-                    </div>
-                    <div class="col-sm-4">
-                        <p><strong>MEMBER</strong></p>
-                        <a href="index.php?page=member">
-                            <img src="https://www.w3schools.com/w3images/bandmember.jpg" class="rounded-circle person shadow" alt="Member" width="200">
-                        </a>
-                        <p class="mt-3">Kelola data pelanggan setia.</p>
-                    </div>
-                    <div class="col-sm-4">
-                        <p><strong>USER</strong></p>
-                        <a href="index.php?page=user">
-                            <img src="https://www.w3schools.com/w3images/bandmember.jpg" class="rounded-circle person shadow" alt="User" width="200">
-                        </a>
-                        <p class="mt-3">Pengaturan akun petugas kasir.</p>
-                    </div>
-                </div>
+        <div class="p-4">
+            <div class="card border-0 shadow-sm p-4" style="border-radius: 15px; min-height: 85vh;">
+                <?php
+                // --- SWITCH 2: TAMPILAN (VIEW) ---
+                switch ($page) {
+                    case 'dashboard': include 'views/dashboard.php'; break;
+                    case 'outlet': include 'views/outlet/index.php'; break;
+                    case 'outlet_tambah': include 'views/outlet/tambah.php'; break;
+                    case 'outlet_edit': include 'views/outlet/edit.php'; break;
+                    case 'member': include 'views/member/index.php'; break;
+                    case 'member_tambah': include 'views/member/tambah.php'; break;
+                    case 'member_edit': include 'views/member/edit.php'; break;
+                    case 'user': include 'views/user/index.php'; break;
+                    case 'user_tambah': include 'views/user/tambah.php'; break;
+                    default: include 'views/dashboard.php'; break;
+                }
+                ?>
             </div>
-
-            <div class="row mt-10 pt-5 justify-content-center">
-                <div class="col-lg-10 shadow-sm p-5 rounded-4 bg-light">
-                    <div class="row align-items-center">
-                        <div class="col-lg-6">
-                            <h2 class="fw-bold">The best offer <br><span class="text-primary">for your business</span></h2>
-                            <p class="text-muted">Gunakan akses akun Anda untuk mulai memproses transaksi pelanggan hari ini.</p>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="card border-0 shadow-sm p-4">
-                               
-                    <form>
-                              <!-- 2 column grid layout with text inputs for the first and last names -->
-                              <div class="row mb-4">
-                                <div class="col">
-                                  <div data-mdb-input-init class="form-outline">
-                                    <input type="text" id="form6Example1" class="form-control" />
-                                    <label class="form-label" for="form6Example1">First name</label>
-                                  </div>
-                                </div>
-                                <div class="col">
-                                  <div data-mdb-input-init class="form-outline">
-                                    <input type="text" id="form6Example2" class="form-control" />
-                                    <label class="form-label" for="form6Example2">Last name</label>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <!-- Text input -->
-                              <div data-mdb-input-init class="form-outline mb-4">
-                                <input type="text" id="form6Example3" class="form-control" />
-                                <label class="form-label" for="form6Example3">Company name</label>
-                              </div>
-
-                              <!-- Text input -->
-                              <div data-mdb-input-init class="form-outline mb-4">
-                                <input type="text" id="form6Example4" class="form-control" />
-                                <label class="form-label" for="form6Example4">Address</label>
-                              </div>
-
-                              <!-- Email input -->
-                              <div data-mdb-input-init class="form-outline mb-4">
-                                <input type="email" id="form6Example5" class="form-control" />
-                                <label class="form-label" for="form6Example5">Email</label>
-                              </div>
-
-                              <!-- Number input -->
-                              <div data-mdb-input-init class="form-outline mb-4">
-                                <input type="number" id="form6Example6" class="form-control" />
-                                <label class="form-label" for="form6Example6">Phone</label>
-                              </div>
-
-                              <!-- Message input -->
-                              <div data-mdb-input-init class="form-outline mb-4">
-                                <textarea class="form-control" id="form6Example7" rows="4"></textarea>
-                                <label class="form-label" for="form6Example7">Additional information</label>
-                              </div>
-
-                              <!-- Checkbox -->
-                              <div class="form-check d-flex justify-content-center mb-4">
-                                <input
-                                  class="form-check-input me-2"
-                                  type="checkbox"
-                                  value=""
-                                  id="form6Example8"
-                                  checked
-                                />
-                                <label class="form-check-label" for="form6Example8"> Create an account? </label>
-                              </div>
-
-                              <!-- Submit button -->
-                              <button data-mdb-ripple-init type="button" class="btn btn-primary btn-block mb-4">Place order</button>
-                            </form>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php
-            break;
-    }
-    ?>
-</div>
-
+        </div>
+    </div>
+</div> 
 <?php include 'views/layout/footer.php'; ?>

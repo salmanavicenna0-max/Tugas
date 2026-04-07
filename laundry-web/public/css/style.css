@@ -1,3 +1,13 @@
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  /* Background Mesh Gradient */
+  background-color: #f8f9fc;
+  background-image: 
+      radial-gradient(at 0% 0%, rgba(13, 110, 253, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(13, 110, 253, 0.1) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
 .container {
   padding: 80px 120px;
 }
@@ -113,3 +123,34 @@
                 text-align: start;
               }
             }
+/* 1. Kunci Sidebar agar tidak bergerak */
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.main-content {
+    margin-left: 260px; 
+    background-color: #ffffff; 
+    min-height: 100vh;
+}
+
+.top-navbar {
+    height: 70px;
+    background: rgb(255, 255, 255);
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+/* Biar gambar di dashboard bisa zoom pas di-hover */
+.hover-zoom {
+    transition: transform .3s;
+}
+.hover-zoom:hover {
+    transform: scale(1.1);
+}
